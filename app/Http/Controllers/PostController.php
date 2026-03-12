@@ -3,18 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PostController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
     public function index(): View
     {
-        $posts = Post::latest()->paginate(10);
+        $this->authorize('viewAny', Post::class);
+
+        $posts = Post::with('user')->latest()->paginate(10);
 
         return view('posts.index', compact('posts'));
     }
@@ -24,6 +29,8 @@ class PostController extends Controller
      */
     public function create(): View
     {
+        $this->authorize('create', Post::class);
+
         return view('posts.create');
     }
 
@@ -32,7 +39,9 @@ class PostController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        Post::create($this->validatedData($request));
+        $this->authorize('create', Post::class);
+
+        $request->user()->posts()->create($this->validatedData($request));
 
         return redirect()
             ->route('posts.index')
@@ -44,6 +53,10 @@ class PostController extends Controller
      */
     public function show(Post $post): View
     {
+        $this->authorize('view', $post);
+
+        $post->loadMissing('user');
+
         return view('posts.show', compact('post'));
     }
 
@@ -52,6 +65,10 @@ class PostController extends Controller
      */
     public function edit(Post $post): View
     {
+        $this->authorize('update', $post);
+
+        $post->loadMissing('user');
+
         return view('posts.edit', compact('post'));
     }
 
@@ -60,6 +77,8 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post): RedirectResponse
     {
+        $this->authorize('update', $post);
+
         $post->update($this->validatedData($request));
 
         return redirect()
@@ -72,6 +91,8 @@ class PostController extends Controller
      */
     public function destroy(Post $post): RedirectResponse
     {
+        $this->authorize('delete', $post);
+
         $post->delete();
 
         return redirect()
